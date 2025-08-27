@@ -1393,12 +1393,26 @@ def run_optimization(config_file='parameters.ini'):
 
 
 if __name__ == "__main__":
-    # This logic checks if a filename was passed as an argument.
-    # If so, it uses it. Otherwise, it defaults to 'parameters.ini'.
+    # This block now adds explicit logging so we can see what's happening
+    import logging
+    import sys
+
+    # Basic logging setup in case the main one hasn't initialized
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)]
+    )
+
+    logging.info("--- SCRIPT EXECUTION STARTED (DEBUGGING) ---")
+    logging.info(f"Command-line arguments received (sys.argv): {sys.argv}")
+
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
+        logging.info(f"SUCCESS: Using config file from command-line argument: '{config_file}'")
     else:
         config_file = 'parameters.ini'
+        logging.info(f"WARNING: No argument found. Defaulting to '{config_file}'")
 
-    # Run the optimization with the correct configuration file.
+    # Run the optimization with the determined configuration file
     run_optimization(config_file)
