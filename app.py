@@ -36,7 +36,6 @@ def check_password():
         password_input = st.text_input("Password", type="password")
 
         if st.button("Login"):
-            # For security, this reads from Streamlit Secrets first, with a fallback for local testing.
             if password_input == st.secrets.get("APP_PASSWORD", "your_secret_password123"):
                 st.session_state["password_correct"] = True
                 st.rerun()
@@ -86,11 +85,9 @@ def display_results():
 
 # --- 3. Main App Interface ---
 if check_password():
-    # --- Initialize Session State for Logs ---
     if 'log_output' not in st.session_state:
         st.session_state.log_output = "Log output from the optimization script will appear here in real-time."
 
-    # --- Sidebar Setup ---
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", width=150)
     st.sidebar.title("Configuration")
@@ -133,9 +130,13 @@ if check_password():
                       'file_path_shortage_case2': 'Data/Shortage Case2.xlsx',
                       'file_path_gdam': 'Data/Avg MCP GDAM 2023 and 2024.xlsx'}
     }
+
     user_params = {}
     for section, params in DEFAULT_PARAMS.items():
         with st.sidebar.expander(f"› {section}", expanded=False):
+            # --- THIS IS THE FIX for the KeyError ---
+            user_params[section] = {}
+            # ----------------------------------------
             for key, value in params.items():
                 if isinstance(value, bool):
                     user_params[section][key] = st.checkbox(key.replace('_', ' ').title(), value,
@@ -160,7 +161,6 @@ if check_password():
                         user_params[section][key] = st.text_input(key.replace('_', ' ').title(), value,
                                                                   key=f"{section}_{key}")
 
-    # --- Main Page Layout ---
     st.title("Power System Optimizer")
     tab_run, tab_log, tab_results = st.tabs(["Setup & Run 🚀", "Live Log Output 📝", "Results & Analysis 📊"])
 
@@ -176,13 +176,11 @@ if check_password():
     with tab_results:
         display_results()
 
-    # --- Execution Logic ---
     if run_button:
         if os.path.exists("Results"):
             for f in os.listdir("Results"):
                 os.remove(os.path.join("Results", f))
 
-        # CHANGE: Clear the log in session_state before a new run
         st.session_state.log_output = "Configuration saved. Starting optimization process...\n\n"
 
         config = configparser.ConfigParser()
@@ -198,7 +196,6 @@ if check_password():
         )
 
         for line in iter(process.stdout.readline, ''):
-            # CHANGE: Append new log lines to the session_state variable
             st.session_state.log_output += line
             log_placeholder.code(st.session_state.log_output, language="log")
 
