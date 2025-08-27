@@ -8,6 +8,10 @@ from my_statistics import weekly_stat_analysis, battery_fixed_size_calculations
 import pandas as pd
 import configparser
 import logging
+import warnings
+
+warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
 
 
 def setup_logging():
