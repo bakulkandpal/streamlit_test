@@ -7,7 +7,6 @@ import subprocess
 from datetime import datetime
 
 # --- 1. Page Configuration and Styling ---
-
 st.set_page_config(
     page_title="Power System Optimizer",
     page_icon="⚡",
@@ -16,7 +15,6 @@ st.set_page_config(
 
 
 def load_css(file_name):
-    """A helper function to load and inject a custom CSS file."""
     try:
         with open(file_name) as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -24,14 +22,11 @@ def load_css(file_name):
         st.warning(f"CSS file '{file_name}' not found. Using default styles.")
 
 
-# Load the custom stylesheet (you will create this file in the next step)
 load_css("style.css")
 
 
 # --- 2. Core Application Logic and Helper Functions ---
-
 def check_password():
-    """Returns `True` if the user has entered the correct password."""
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
 
@@ -41,6 +36,7 @@ def check_password():
         password_input = st.text_input("Password", type="password")
 
         if st.button("Login"):
+            # For security, this reads from Streamlit Secrets first, with a fallback for local testing.
             if password_input == st.secrets.get("APP_PASSWORD", "your_secret_password123"):
                 st.session_state["password_correct"] = True
                 st.rerun()
@@ -51,7 +47,6 @@ def check_password():
 
 
 def display_results():
-    """Scans the Results folder and displays metrics and download links."""
     st.header("Results & Analysis 📊")
     results_dir = "Results"
     sizing_file_path = os.path.join(results_dir, 'Optimal_Sizing_RE_BESS.xlsx')
@@ -62,10 +57,7 @@ def display_results():
 
     st.subheader("Key Sizing Results")
     try:
-        # Read the 'Sizing Results' sheet from the Excel file
         df_results = pd.read_excel(sizing_file_path, sheet_name='Sizing Results', index_col=0)
-
-        # Extract values for the metric cards
         total_solar = df_results.loc['solar_size_goa':'solar_size_tel'].sum().iloc[0]
         total_wind = df_results.loc['wind_size_maha':'wind_size_karnataka'].sum().iloc[0]
         battery_mwh = df_results.loc['battery_capacity', 'Value']
@@ -76,7 +68,6 @@ def display_results():
         col2.metric("Total Wind Capacity (MW)", f"{total_wind:,.1f}")
         col3.metric("Battery Capacity (MWh)", f"{battery_mwh:,.1f}")
         col4.metric("Total Deficit (MWh)", f"{total_deficit:,.1f}", delta_color="inverse")
-
     except Exception as e:
         st.error(f"Could not read or parse the results file: {e}")
 
@@ -84,34 +75,27 @@ def display_results():
     st.subheader("Download Output Files")
 
     result_files = [f for f in os.listdir(results_dir) if f.endswith('.xlsx')]
-    if not result_files:
-        st.warning("No result files found.")
-        return
-
     for file in sorted(result_files):
         file_path = os.path.join(results_dir, file)
         with open(file_path, "rb") as fp:
             st.download_button(
-                label=f"📥 Download {file}",
-                data=fp,
-                file_name=file,
-                mime="application/vnd.ms-excel",
-                key=f"download_{file}"  # Unique key for each button
+                label=f"📥 Download {file}", data=fp, file_name=file,
+                mime="application/vnd.ms-excel", key=f"download_{file}"
             )
 
 
 # --- 3. Main App Interface ---
-
 if check_password():
+    # --- Initialize Session State for Logs ---
+    if 'log_output' not in st.session_state:
+        st.session_state.log_output = "Log output from the optimization script will appear here in real-time."
+
     # --- Sidebar Setup ---
-    # You must upload a logo.png file to your repository for this to work
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", width=150)
-
     st.sidebar.title("Configuration")
     st.sidebar.markdown("Adjust the model inputs below. The optimization will use these settings.")
 
-    # (The DEFAULT_PARAMS dictionary and sidebar expanders go here, unchanged from before)
     DEFAULT_PARAMS = {
         'PowerParameters': {'wind_size_karnataka': 0.1, 'wind_size_tamil': 0.1, 'wind_size_goa_or_maharashtra': 100.0,
                             'pv_size_gujarat': 0.1, 'pv_size_telangana': 119.0, 'pv_size_rajasthan': 0.1,
@@ -149,12 +133,9 @@ if check_password():
                       'file_path_shortage_case2': 'Data/Shortage Case2.xlsx',
                       'file_path_gdam': 'Data/Avg MCP GDAM 2023 and 2024.xlsx'}
     }
-
     user_params = {}
     for section, params in DEFAULT_PARAMS.items():
         with st.sidebar.expander(f"› {section}", expanded=False):
-            user_params[section] = {}
-            # ... (the for loop to create sidebar widgets is unchanged)
             for key, value in params.items():
                 if isinstance(value, bool):
                     user_params[section][key] = st.checkbox(key.replace('_', ' ').title(), value,
@@ -190,41 +171,36 @@ if check_password():
 
     with tab_log:
         st.header("Live Log Output")
-        log_placeholder = st.empty()
-        log_placeholder.info("Log output from the optimization script will appear here in real-time.")
+        log_placeholder = st.code(st.session_state.log_output, language="log")
 
     with tab_results:
         display_results()
 
-    # --- Execution Logic (triggered from the 'Run' tab) ---
+    # --- Execution Logic ---
     if run_button:
-        # Clear previous results before a new run
         if os.path.exists("Results"):
             for f in os.listdir("Results"):
                 os.remove(os.path.join("Results", f))
 
-        # Write config and run subprocess
+        # CHANGE: Clear the log in session_state before a new run
+        st.session_state.log_output = "Configuration saved. Starting optimization process...\n\n"
+
         config = configparser.ConfigParser()
         for section, params in user_params.items():
             config[section] = {k: str(v) for k, v in params.items()}
-
         config_path = 'temp_parameters.ini'
         with open(config_path, 'w') as configfile:
             config.write(configfile)
-
-        log_placeholder.code("Configuration saved. Starting optimization process...", language="log")
 
         process = subprocess.Popen(
             [sys.executable, "optimization_model.py", config_path],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', bufsize=1
         )
 
-        log_output = ""
         for line in iter(process.stdout.readline, ''):
-            log_output += line
-            # Update the log placeholder inside the 'Live Log' tab
-            with tab_log:
-                log_placeholder.code(log_output, language="log")
+            # CHANGE: Append new log lines to the session_state variable
+            st.session_state.log_output += line
+            log_placeholder.code(st.session_state.log_output, language="log")
 
         process.stdout.close()
         return_code = process.wait()
@@ -235,5 +211,4 @@ if check_password():
         else:
             st.toast("❌ Optimization failed. Check logs for errors.", icon="🔥")
 
-        # Rerun to refresh the results tab automatically
         st.rerun()
