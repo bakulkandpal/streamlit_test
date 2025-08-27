@@ -44,34 +44,44 @@ def check_password():
         return False
     return True
 
+# In file: app.py
 
 def display_results():
+    """
+    Scans the Results folder. Displays metrics if the main sizing file exists,
+    and shows download links for ALL available result files.
+    """
     st.header("Results & Analysis 📊")
     results_dir = "Results"
     sizing_file_path = os.path.join(results_dir, 'Optimal_Sizing_RE_BESS.xlsx')
 
-    if not os.path.exists(sizing_file_path):
-        st.info("Run an optimization to see the results here.")
-        return
-
+    # --- 1. Display Key Metrics (only if the specific file exists) ---
     st.subheader("Key Sizing Results")
-    try:
-        df_results = pd.read_excel(sizing_file_path, sheet_name='Sizing Results', index_col=0)
-        total_solar = df_results.loc['solar_size_goa':'solar_size_tel'].sum().iloc[0]
-        total_wind = df_results.loc['wind_size_maha':'wind_size_karnataka'].sum().iloc[0]
-        battery_mwh = df_results.loc['battery_capacity', 'Value']
-        total_deficit = df_results.loc['total_deficit', 'Value']
+    if os.path.exists(sizing_file_path):
+        try:
+            df_results = pd.read_excel(sizing_file_path, sheet_name='Sizing Results', index_col=0)
+            total_solar = df_results.loc['solar_size_goa':'solar_size_tel'].sum().iloc[0]
+            total_wind = df_results.loc['wind_size_maha':'wind_size_karnataka'].sum().iloc[0]
+            battery_mwh = df_results.loc['battery_capacity', 'Value']
+            total_deficit = df_results.loc['total_deficit', 'Value']
 
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Solar Capacity (MW)", f"{total_solar:,.1f}")
-        col2.metric("Total Wind Capacity (MW)", f"{total_wind:,.1f}")
-        col3.metric("Battery Capacity (MWh)", f"{battery_mwh:,.1f}")
-        col4.metric("Total Deficit (MWh)", f"{total_deficit:,.1f}", delta_color="inverse")
-    except Exception as e:
-        st.error(f"Could not read or parse the results file: {e}")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Solar Capacity (MW)", f"{total_solar:,.1f}")
+            col2.metric("Total Wind Capacity (MW)", f"{total_wind:,.1f}")
+            col3.metric("Battery Capacity (MWh)", f"{battery_mwh:,.1f}")
+            col4.metric("Total Deficit (MWh)", f"{total_deficit:,.1f}", delta_color="inverse")
+        except Exception as e:
+            st.error(f"Could not read or parse the sizing results file: {e}")
+    else:
+        st.warning("Key metrics are unavailable because the sizing optimization was infeasible or did not complete.")
 
     st.divider()
+
+    # --- 2. Display Download Links (for ANY Excel file found) ---
     st.subheader("Download Output Files")
+    if not os.path.exists(results_dir) or not any(f.endswith('.xlsx') for f in os.listdir(results_dir)):
+        st.info("No result files found. Run an optimization to generate output files.")
+        return
 
     result_files = [f for f in os.listdir(results_dir) if f.endswith('.xlsx')]
     for file in sorted(result_files):
