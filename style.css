@@ -1,0 +1,45 @@
+/* In file: style.css */
+
+/* --- Main App Styling --- */
+.stApp {
+    background-image: linear-gradient(to right top, #0a192f, #172a45, #172a45, #0a192f);
+    background-attachment: fixed;
+    background-size: cover;
+}
+
+/* --- Sidebar Styling --- */
+[data-testid="stSidebar"] {
+    background-color: #0a192f;
+}
+
+/* --- Button Styling --- */
+.stButton>button {
+    border: 2px solid #6c8aff;
+    border-radius: 10px;
+    color: #6c8aff;
+    background-color: transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.stButton>button:hover {
+    border-color: #a8eb12;
+    color: #a8eb12;
+    background-color: rgba(168, 235, 18, 0.1);
+}
+
+.stButton>button:active {
+    border-color: #a8eb12;
+    color: #a8eb12;
+    background-color: rgba(168, 235, 18, 0.2);
+}
+
+/* --- Metric Card "Glass" Effect --- */
+[data-testid="stMetric"] {
+    background: rgba(43, 60, 99, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(43, 60, 99, 0.6);
+    padding: 15px;
+}
