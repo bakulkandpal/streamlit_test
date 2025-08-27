@@ -1393,5 +1393,12 @@ def run_optimization(config_file='parameters.ini'):
 
 
 if __name__ == "__main__":
-    # This allows you to still run the script directly if needed
-    run_optimization('parameters.ini')
+    # This logic checks if a filename was passed as an argument.
+    # If so, it uses it. Otherwise, it defaults to 'parameters.ini'.
+    if len(sys.argv) > 1:
+        config_file = sys.argv[1]
+    else:
+        config_file = 'parameters.ini'
+
+    # Run the optimization with the correct configuration file.
+    run_optimization(config_file)
