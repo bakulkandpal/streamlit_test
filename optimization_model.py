@@ -22,10 +22,12 @@ setup_logging()
 
 
 def read_config(config_file='parameters.ini'):
-    """Read all configuration parameters from the config file"""
+    """Read all configuration parameters from the config file (robust version)."""
     config = configparser.ConfigParser()
     config.read(config_file)
     params = {}
+
+    # --- Step 1: Read all parameters from all sections into a flat dictionary ---
     for section in config.sections():
         for key, val in config.items(section):
             try:
@@ -34,17 +36,23 @@ def read_config(config_file='parameters.ini'):
                 elif key == 'shortage_case':
                     params[key] = val
                 else:
+                    # Try to convert to float, otherwise keep as string
                     params[key] = float(val)
             except (ValueError, TypeError):
                 params[key] = val
 
+    # --- Step 2: Build the nested battery dictionary from the params we just read ---
     params['battery_configs'] = {}
     battery_count = 1
-    while f"battery{battery_count}_power" in config['BatteryConfigs_NonOptimization']:
+    # **This is the key change**: We check for the key in the `params` dictionary
+    # that we already safely loaded, not in the raw config object.
+    while f"battery{battery_count}_power" in params:
         power_key = f"battery{battery_count}_power"
         duration_key = f"battery{battery_count}_duration"
-        power = float(config['BatteryConfigs_NonOptimization'][power_key])
-        duration = float(config['BatteryConfigs_NonOptimization'][duration_key])
+
+        power = params[power_key]
+        duration = params[duration_key]
+
         params['battery_configs'][f"Battery {battery_count}"] = {"power": power, "duration": duration}
         battery_count += 1
 
